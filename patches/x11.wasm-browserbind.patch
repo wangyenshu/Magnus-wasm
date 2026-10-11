@@ -1,0 +1,109 @@
+diff --git a/src/libX11/BrowserBind.c b/src/libX11/BrowserBind.c
+index c6e25bf..7d9869d 100644
+--- a/src/libX11/BrowserBind.c
++++ b/src/libX11/BrowserBind.c
+@@ -52,6 +52,23 @@ X11WasmQueueKeyEvent(
+ 	    browserDisplay.pointerX, browserDisplay.pointerY, time);
+ }
+ 
++/*
++ * Text input carries no modifier state; Tk derives the keysym from keycode
++ * and state, so mark characters on the shifted level of their keycode.
++ */
++static unsigned int
++BrowserTextEventState(
++    unsigned int keycode,
++    KeySym keySym,
++    unsigned int state)
++{
++    if ((BrowserKeySymForKeycodeLevel(keycode, 0) != keySym)
++	    && (BrowserKeySymForKeycodeLevel(keycode, 1) == keySym)) {
++	state |= ShiftMask;
++    }
++    return state;
++}
++
+ EMSCRIPTEN_KEEPALIVE int
+ X11WasmQueueTextEventFields(
+     int type,
+@@ -67,8 +84,10 @@ X11WasmQueueTextEventFields(
+ 	    || (keySym == NoSymbol)) {
+ 	return 0;
+     }
++    unsigned int keycode = BrowserKeycodeFromKeySym(keySym);
+     return X11WasmQueueKeyEventFields(type, window,
+-	    BrowserKeycodeFromKeySym(keySym), (unsigned int)keySym, state,
++	    keycode, (unsigned int)keySym,
++	    BrowserTextEventState(keycode, keySym, state),
+ 	    browserDisplay.pointerX, browserDisplay.pointerY, time);
+ }
+ 
+@@ -87,8 +106,10 @@ X11WasmQueueTextEventFieldsAtWindow(
+ 	    || (keySym == NoSymbol)) {
+ 	return 0;
+     }
++    unsigned int keycode = BrowserKeycodeFromKeySym(keySym);
+     return BrowserQueueKeyEventFieldsAtWindow(type, window,
+-	    BrowserKeycodeFromKeySym(keySym), (unsigned int)keySym, state,
++	    keycode, (unsigned int)keySym,
++	    BrowserTextEventState(keycode, keySym, state),
+ 	    browserDisplay.pointerX, browserDisplay.pointerY, time, 0);
+ }
+ 
+@@ -847,48 +868,19 @@ X11WasmQueueCrossingEvent(
+     int y,
+     unsigned int time)
+ {
+-    Window target;
+-    Window nextTarget;
+-    Window oldTarget;
+-    int rootX = x;
+-    int rootY = y;
+-    int oldRootX;
+-    int oldRootY;
+-
+     if ((type != EnterNotify) && (type != LeaveNotify)) {
+ 	return 0;
+     }
+     BrowserInitDisplay();
+-    state = BrowserMappedPointerState(state);
+     (void)window;
+-    BrowserClampPointerToGrabConfine(&rootX, &rootY);
+-    oldTarget = browserDisplay.pointerWindow;
+-    nextTarget = BrowserHitTestRoot(rootX, rootY, NULL, NULL);
+-    if (nextTarget == oldTarget) {
+-	BrowserUpdatePointerState(nextTarget, rootX, rootY, state);
+-	return 0;
+-    }
+-    oldRootX = browserDisplay.pointerX;
+-    oldRootY = browserDisplay.pointerY;
+-    if (type == LeaveNotify) {
+-	if (!BrowserWindowCanReceiveEvents(browserDisplay.pointerWindow)) {
+-	    BrowserUpdatePointerState(nextTarget, rootX, rootY, state);
+-	    return 0;
+-	}
+-	target = browserDisplay.pointerWindow;
+-    } else {
+-	if (!BrowserWindowCanReceiveEvents(nextTarget)) {
+-	    BrowserUpdatePointerState(nextTarget, rootX, rootY, state);
+-	    return 0;
+-	}
+-	target = nextTarget;
+-    }
+-    BrowserUpdatePointerState(nextTarget, rootX, rootY, state);
+-    return BrowserQueueCrossingEventForTarget(type, target, state, rootX,
+-	    rootY, (Time)time,
+-	    BrowserCrossingEndpointDetail(type, oldTarget, nextTarget),
+-	    (type == LeaveNotify) ? oldRootX : rootX,
+-	    (type == LeaveNotify) ? oldRootY : rootY);
++    /*
++     * DOM pointerout/pointerover arrive as a pair; queue the complete
++     * Leave/Enter path for the pointer move at once.  Handling them
++     * separately lost the EnterNotify, as the pointerout half already
++     * moved the pointer window.
++     */
++    return BrowserQueuePointerCrossingEvents(BrowserMappedPointerState(state),
++	    x, y, (Time)time);
+ }
+ 
+ EMSCRIPTEN_KEEPALIVE int

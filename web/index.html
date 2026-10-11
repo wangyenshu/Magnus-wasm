@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Magnus</title>
+<style>html,body{margin:0;height:100%;overflow:hidden}#x11{position:fixed;inset:0}</style>
+</head>
+<body>
+<div id="x11"></div>
+<script>
+var Module = {
+  x11WasmRoot: "#x11",
+  arguments: ["/magnus/front_end/magnus.tcl"],
+  x11WasmServiceUserActivationEvents: function () {
+    return Module._TkBrowserServiceUserActivationEvents ? Module._TkBrowserServiceUserActivationEvents() : 0;
+  }
+};
+</script>
+<script src="magnus-backend.js"></script>
+<script src="frontend.js"></script>
+</body>
+</html>

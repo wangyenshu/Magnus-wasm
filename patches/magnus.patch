@@ -1,0 +1,642 @@
+diff --git a/back_end/AProducts/include/AmalgamatedProductParser.h b/back_end/AProducts/include/AmalgamatedProductParser.h
+index 9b2fd42..9dc0e4c 100644
+--- a/back_end/AProducts/include/AmalgamatedProductParser.h
++++ b/back_end/AProducts/include/AmalgamatedProductParser.h
+@@ -58,7 +58,7 @@ public:
+ 				    Chars& errMesg, int axRelators);
+   
+   void parseFactorsAndRelations(FreeGroup& f1, FreeGroup& f2,
+-				VectorOf<Word>& gens1, VectorOf<Word>& gens1,
++				VectorOf<Word>& gens1, VectorOf<Word>& gens2,
+ 				int maxRelators, Chars& errMesg);
+   
+   AmalgProductOfFreeGroupsRep* parseAPofFreeGroups( Chars& errMesg );
+diff --git a/back_end/Elt/include/Elt.h b/back_end/Elt/include/Elt.h
+index 26823ba..a35abc4 100644
+--- a/back_end/Elt/include/Elt.h
++++ b/back_end/Elt/include/Elt.h
+@@ -184,6 +184,7 @@ protected:
+   Elt( EltRep* p ) : GenericObject(p) { }
+ 
+ };
++Elt inverse( const Elt& e ); // make the friend visible to ordinary lookup
+ 
+ 
+ //----------------------- Associated Global ------------------------//
+diff --git a/back_end/Elt/include/Generator.h b/back_end/Elt/include/Generator.h
+index 135e092..b3359e5 100644
+--- a/back_end/Elt/include/Generator.h
++++ b/back_end/Elt/include/Generator.h
+@@ -104,6 +104,7 @@ private:
+   */
+ 
+ };
++int ord( Generator g ); // make the friend visible to ordinary lookup
+ 
+ 
+ // functions for manipulating Generators
+diff --git a/back_end/Elt/include/Word.h b/back_end/Elt/include/Word.h
+index 1490b10..d55ab32 100644
+--- a/back_end/Elt/include/Word.h
++++ b/back_end/Elt/include/Word.h
+@@ -307,6 +307,8 @@ private:
+   // which returns a representation.
+ 
+ };
++Word operator * ( const Generator& x, const Word& w );
++Word operator * ( const Generator& x, const Generator& y );
+ 
+ 
+ //--------------------------- Genref ------------------------------//
+diff --git a/back_end/Equations/src/Queue.C b/back_end/Equations/src/Queue.C
+index 7030412..8d3a19d 100644
+--- a/back_end/Equations/src/Queue.C
++++ b/back_end/Equations/src/Queue.C
+@@ -18,7 +18,7 @@
+ template <class T>
+ void QueueOf<T>::push( const T& t ) 
+ { 
+-  append(t); 
++  this->append(t); 
+ }
+ 
+ template class QueueOf<int>;
+diff --git a/back_end/Group/src/FreeByCyclic.C b/back_end/Group/src/FreeByCyclic.C
+index 279eb19..eee0709 100644
+--- a/back_end/Group/src/FreeByCyclic.C
++++ b/back_end/Group/src/FreeByCyclic.C
+@@ -131,7 +131,7 @@ Word FreeByCyclic::normalForm(const Word& w) const
+ 
+ ostream& operator<<( ostream& ostr, const FreeByCyclic& G )
+ {
+-  ostr << G.theGroup << ' ' << G.theAut;
++  return ostr << G.theGroup << ' ' << G.theAut;
+ }
+ 
+ istream& operator>>( istream& istr, FreeByCyclic& G )
+@@ -141,6 +141,7 @@ istream& operator>>( istream& istr, FreeByCyclic& G )
+   Map M(F,F);
+   istr >> M;
+   G = FreeByCyclic(F,M);
++  return istr;
+ }
+ 
+ 
+diff --git a/back_end/Matrix/src/Matrix.C b/back_end/Matrix/src/Matrix.C
+index 0326707..eba5be2 100644
+--- a/back_end/Matrix/src/Matrix.C
++++ b/back_end/Matrix/src/Matrix.C
+@@ -70,7 +70,7 @@ MatrixRep<R>& MatrixRep<R>::operator *= ( const MatrixRep& M )
+   MatrixRow<R>* tmpArray = this->theArray;
+   int tmpRowBegin = this->rowBegin;
+   int tmpColBegin = this->colBegin;
+-  makeArray(this->height,this->width);
++  this->makeArray(this->height,this->width);
+   for( int i = 0; i < this->height; i++ )
+     for( int j = 0; j < M.width; j++ ) {
+       R amount = 0;
+diff --git a/back_end/NilpotentGroup/include/Letter.h b/back_end/NilpotentGroup/include/Letter.h
+index a99a102..52f48f6 100644
+--- a/back_end/NilpotentGroup/include/Letter.h
++++ b/back_end/NilpotentGroup/include/Letter.h
+@@ -97,12 +97,12 @@ struct Letter {
+ 
+   // IPC write
+   friend ostream& operator < (ostream& os, const Letter& let) {
+-    os < let.gen < let.power;
++    return os < let.gen < let.power;
+   }
+ 
+   // IPC read
+   friend istream& operator > (istream& is, Letter& let) {
+-    is > let.gen > let.power;
++    return is > let.gen > let.power;
+   }
+ 
+   // Data
+diff --git a/back_end/NilpotentGroup/include/NilpotentCollector.h b/back_end/NilpotentGroup/include/NilpotentCollector.h
+index fba847f..222d6fd 100644
+--- a/back_end/NilpotentGroup/include/NilpotentCollector.h
++++ b/back_end/NilpotentGroup/include/NilpotentCollector.h
+@@ -185,6 +185,7 @@ public:
+   NGCollector & operator = (const NGCollector& ngc) {
+     delete NC;
+     NC = ngc.NC->clone();
++    return *this;
+   }
+   //The assignment operator
+ 
+diff --git a/back_end/NilpotentGroup/src/BasicCommutators.C b/back_end/NilpotentGroup/src/BasicCommutators.C
+index 8806286..84e5cf7 100644
+--- a/back_end/NilpotentGroup/src/BasicCommutators.C
++++ b/back_end/NilpotentGroup/src/BasicCommutators.C
+@@ -45,7 +45,7 @@ bool BCEntry::operator < ( const BCEntry& v ) const {
+ }
+ 
+ ostream& operator << (ostream& s, const BCEntry& e) {
+-  s << "[" << e.lPart << "," << e.rPart << "]";
++  return s << "[" << e.lPart << "," << e.rPart << "]";
+ }
+ 
+ 
+diff --git a/back_end/NilpotentGroup/src/LCSQuotients.C b/back_end/NilpotentGroup/src/LCSQuotients.C
+index 57133bc..bd319ff 100644
+--- a/back_end/NilpotentGroup/src/LCSQuotients.C
++++ b/back_end/NilpotentGroup/src/LCSQuotients.C
+@@ -47,6 +47,7 @@ ostream& operator < ( ostream& s, const BasisWord& w ) {
+ 
+   s < w.theWord < w.theWeight < w.theOrder < w.theLocalNumber 
+     < w.theGlobalNumber < w.theName;
++  return s;
+ }
+ // IPC output
+ 
+@@ -54,6 +55,7 @@ istream& operator > ( istream& s, BasisWord& w ) {
+ 
+   s > w.theWord > w.theWeight > w.theOrder > w.theLocalNumber 
+     > w.theGlobalNumber > w.theName;
++  return s;
+ }
+ 
+ // IPC input
+diff --git a/back_end/NilpotentGroup/src/Presentation.C b/back_end/NilpotentGroup/src/Presentation.C
+index 03d8f54..2400339 100644
+--- a/back_end/NilpotentGroup/src/Presentation.C
++++ b/back_end/NilpotentGroup/src/Presentation.C
+@@ -22,7 +22,7 @@
+ 
+ 
+ ostream& operator << ( ostream& s, const NilpotentRelator& rel ) {
+-  s << "(" << rel.left1 << "," << rel.left2 << ") = " << rel.right << endl;
++  return s << "(" << rel.left1 << "," << rel.left2 << ") = " << rel.right << endl;
+ }
+ 
+ 
+diff --git a/back_end/NilpotentGroup/src/SGOfFNGRep.C b/back_end/NilpotentGroup/src/SGOfFNGRep.C
+index 29fd239..1fa5ec2 100644
+--- a/back_end/NilpotentGroup/src/SGOfFNGRep.C
++++ b/back_end/NilpotentGroup/src/SGOfFNGRep.C
+@@ -195,6 +195,7 @@ ostream& SGOfFreeNilpotentGroupRep::writeIPC( ostream& s) const {
+   SGOfNilpotentGroupRep::writeIPC(s);
+   s < theParentGroup < theGenerators < theBasis 
+     < theBasisNames < theBasisSet;
++  return s;
+ }
+ 
+ istream& SGOfFreeNilpotentGroupRep::readIPC( istream& s) const {
+diff --git a/back_end/Packages/src/PackagesData.C b/back_end/Packages/src/PackagesData.C
+index 1c49896..da865aa 100644
+--- a/back_end/Packages/src/PackagesData.C
++++ b/back_end/Packages/src/PackagesData.C
+@@ -485,3 +485,6 @@ Chars Packages::getCheckinTypeName( int n )
+     error("SMFPGroup::Checkin_Type Packages::getCheckinType( int n ) :" 
+ 	  " can't recognize checkin type");
+ }
++
++template class DatabaseOf<PackageRecord>;
++template class DatabaseOf<ParamRecord>;
+diff --git a/back_end/Polynomial/include/Polynomial.h b/back_end/Polynomial/include/Polynomial.h
+index b382e87..2cb1b2f 100644
+--- a/back_end/Polynomial/include/Polynomial.h
++++ b/back_end/Polynomial/include/Polynomial.h
+@@ -320,7 +320,7 @@ private:
+   {
+     value += key;
+     if( value.getCoefficient() == R(0) )
+-      remove(value);
++      this->remove(value);
+     //R c = value.getCoefficient();
+     //value.setCoefficient( c + key.getCoefficient() ); 
+   } 
+diff --git a/back_end/SessionManager/include/BaseProperties.h b/back_end/SessionManager/include/BaseProperties.h
+index d623f9b..12ea5ad 100644
+--- a/back_end/SessionManager/include/BaseProperties.h
++++ b/back_end/SessionManager/include/BaseProperties.h
+@@ -48,8 +48,8 @@
+ 
+ class NoData {};
+ //  I/O stubs
+-inline istream& operator>>( const istream&, const NoData& ) {}
+-inline ostream& operator<<( const ostream&, const NoData& ) {}
++inline istream& operator>>( const istream& i, const NoData& ) { return (istream&)i; }
++inline ostream& operator<<( const ostream& o, const NoData& ) { return (ostream&)o; }
+  
+ 
+ /*
+diff --git a/back_end/SessionManager/include/DatabaseManager.h b/back_end/SessionManager/include/DatabaseManager.h
+index edf870a..3aa673a 100644
+--- a/back_end/SessionManager/include/DatabaseManager.h
++++ b/back_end/SessionManager/include/DatabaseManager.h
+@@ -294,11 +294,12 @@ public:
+     int i;
+     istr >> i;
+     cath.theCategory = (DatabaseObjectCategory::Category)i;
++    return istr;
+   }
+ 
+   friend ostream& operator<<(ostream& ostr, 
+ 			     const DatabaseObjectCategory& cath ) {
+-    ostr << (int)cath.theCategory;
++    return ostr << (int)cath.theCategory;
+   }
+ 
+ private:
+diff --git a/back_end/SessionManager/src/BaseProperties.C b/back_end/SessionManager/src/BaseProperties.C
+index df8fcf9..868ed65 100644
+--- a/back_end/SessionManager/src/BaseProperties.C
++++ b/back_end/SessionManager/src/BaseProperties.C
+@@ -116,6 +116,7 @@ NilpGroupAssocProperty::operator=( const NilpGroupAssocProperty& P )
+     unbindAll();
+     copyAll( P );
+   }
++  return *this;
+ }
+ 
+ NilpGroupAssocProperty::~NilpGroupAssocProperty()
+@@ -275,6 +276,7 @@ SGNilpGroupAssocProperty::operator=( const SGNilpGroupAssocProperty& P )
+     unbindAll();
+     copyAll( P );
+   }
++  return *this;
+ }
+ 
+ SGNilpGroupAssocProperty::~SGNilpGroupAssocProperty()
+diff --git a/back_end/SessionManager/src/FEData.C b/back_end/SessionManager/src/FEData.C
+index 19a4b13..ba74f42 100644
+--- a/back_end/SessionManager/src/FEData.C
++++ b/back_end/SessionManager/src/FEData.C
+@@ -150,6 +150,7 @@ FEData::DataPair& FEData::DataPair::operator = (const FEData::DataPair& dp)
+ {
+   theKey = dp.theKey;
+   theDatum = dp.theDatum;
++  return *this;
+ }
+ 
+ 
+diff --git a/back_end/SessionManager/src/Property.C b/back_end/SessionManager/src/Property.C
+index 4de292b..ec96bfe 100644
+--- a/back_end/SessionManager/src/Property.C
++++ b/back_end/SessionManager/src/Property.C
+@@ -408,7 +408,7 @@ Chars PropertiesParser::parsePropertiesCollection(
+     return "PropertiesParser::parsePropertiesCollection(): "
+            "no a rightcurly brace found.";
+   }
+-
++  return Chars();
+ }
+ 
+ Chars PropertiesParser::parseKnownProperties(
+diff --git a/back_end/SessionManager/src/SMList.C b/back_end/SessionManager/src/SMList.C
+index 930dce3..f745c20 100644
+--- a/back_end/SessionManager/src/SMList.C
++++ b/back_end/SessionManager/src/SMList.C
+@@ -310,7 +310,7 @@ LIC::status_type::status_type( int arg_s ):
+ 			      PROT_READ | PROT_WRITE, MAP_SHARED, 
+ 			      status_file, 0); 
+     
+-  if ( status_buffer < 0 )
++  if ( status_buffer == (char*)MAP_FAILED )
+     error("LIC::status_type::status_type( int s ) :"
+ 	  "error couldn't map the file.");
+ }
+@@ -369,6 +369,10 @@ bool LIC::status_type::isChecked() const
+   return true; 
+ }
+ 
++template <> SMListType<Word> SMList<Word>::theType = SMListType<Word>();
++template <> SMListType<Map> SMList<Map>::theType = SMListType<Map>();
++template <> SMListType<Subgroup> SMList<Subgroup>::theType = SMListType<Subgroup>();
++
+ template class SMList<Word>;
+ template class SMList<Subgroup>;
+ template class SMList<Map>;
+@@ -383,9 +387,6 @@ template class SMList<Map>;
+ //EnProbType<Subgroup> EnumeratorProblem<Subgroup>::theType;
+ //EnProbType<NoType> EnumeratorProblem<NoType>::theType;
+ 
+-template <> SMListType<Word> SMList<Word>::theType = SMListType<Word>();
+-template <> SMListType<Map> SMList<Map>::theType = SMListType<Map>();
+-template <> SMListType<Subgroup> SMList<Subgroup>::theType = SMListType<Subgroup>();
+ 
+ template <> EnProbType<Word> EnumeratorProblem<Word>::theType = EnProbType<Word>();
+ template <> EnProbType<Map> EnumeratorProblem<Map>::theType = EnProbType<Map>();
+diff --git a/back_end/Subgroup/include/DoubleCosetGraph.h b/back_end/Subgroup/include/DoubleCosetGraph.h
+index b8d2c6b..45fdc7a 100644
+--- a/back_end/Subgroup/include/DoubleCosetGraph.h
++++ b/back_end/Subgroup/include/DoubleCosetGraph.h
+@@ -40,6 +40,7 @@ struct DCGState {
+       UCurrent = state.UCurrent;
+     else
+       currentVertex = state.currentVertex;
++    return *this;
+   }
+ 
+   bool operator == ( const DCGState& state ) const
+diff --git a/back_end/Subgroup/src/SubgroupGraphRep.C b/back_end/Subgroup/src/SubgroupGraphRep.C
+index 6148424..0089ecb 100644
+--- a/back_end/Subgroup/src/SubgroupGraphRep.C
++++ b/back_end/Subgroup/src/SubgroupGraphRep.C
+@@ -473,8 +473,10 @@ void SubgroupGraphRep::reduceGraph(VertexType* minEquivVertex)
+     error("out of space in SubgroupGraphRep::reduceGraph");
+ 
+   liveVertexIndex = 0;
+-  while ( liveVertexIndex < numberOfLiveVertices )
+-    newVertexNum[liveVertices[liveVertexIndex]] = liveVertexIndex++;
++  while ( liveVertexIndex < numberOfLiveVertices ) {
++    newVertexNum[liveVertices[liveVertexIndex]] = liveVertexIndex;
++    ++liveVertexIndex;
++  }
+   // Vertex 0 is always live, so it gets reassigned to 0.
+ 
+   // Now we can fill in the new table.
+diff --git a/back_end/Todd-Coxeter/src/CosetEnumerator.C b/back_end/Todd-Coxeter/src/CosetEnumerator.C
+index 5927187..ef57cb9 100644
+--- a/back_end/Todd-Coxeter/src/CosetEnumerator.C
++++ b/back_end/Todd-Coxeter/src/CosetEnumerator.C
+@@ -39,6 +39,7 @@ PermutationRepresentation& PermutationRepresentation::operator = ( const Permuta
+     permTable = new ListOf< VectorOf<int> >[numberOfGens];
+     for (int i=0;i<numberOfGens;i++)
+       permTable[i] = p.permTable[i];
++    return *this;
+ }
+   
+ void PermutationRepresentation::printOn(const VectorOf<Chars>& n, ostream& ostr)const
+diff --git a/back_end/black_boxes/kbmag/lib/fsa.c b/back_end/black_boxes/kbmag/lib/fsa.c
+index 080affa..d941e09 100644
+--- a/back_end/black_boxes/kbmag/lib/fsa.c
++++ b/back_end/black_boxes/kbmag/lib/fsa.c
+@@ -44,8 +44,8 @@ void hash_clear();
+ int *hash_rec();
+ int hash_rec_len();
+ int hash_locate();
+-void add_word_to_buffer();
+-void add_iword_to_buffer();
++int add_word_to_buffer();
++int add_iword_to_buffer();
+ int int_len();
+ fsa * fsa_and();
+ 
+diff --git a/back_end/black_boxes/kbmag/src/gpaxioms.c b/back_end/black_boxes/kbmag/src/gpaxioms.c
+index 8f1d55e..a970d6e 100644
+--- a/back_end/black_boxes/kbmag/src/gpaxioms.c
++++ b/back_end/black_boxes/kbmag/src/gpaxioms.c
+@@ -274,11 +274,11 @@ main(argc, argv)
+         add_word_to_buffer(stdout,lhs,rws.gen_name);
+         add_to_buffer(0," = ");
+         if ((l=strlen(buffer))>44) {
+-           printbuffer(stdout,buffer);
++           printbuffer(stdout);
+            add_to_buffer(21,"");
+         }
+         add_word_to_buffer(stdout,rhs,rws.gen_name);
+-        printbuffer(stdout,buffer);
++        printbuffer(stdout);
+       }
+       suffl = file_suffix(lhs); suffr = file_suffix(rhs);
+       gotl = gotr = FALSE;
+@@ -316,7 +316,7 @@ main(argc, argv)
+         add_word_to_buffer(stdout,lhs,rws.gen_name);
+         add_to_buffer(0," = ");
+         add_word_to_buffer(stdout,rhs,rws.gen_name);
+-        printbuffer(stdout,buffer);
++        printbuffer(stdout);
+         exit(2);
+       }
+       if (keepfiles) {
+@@ -528,7 +528,7 @@ check_short_relation()
+     add_word_to_buffer(stdout,lhs,rws.gen_name);
+     add_to_buffer(0," = ");
+     add_word_to_buffer(stdout,rhs,rws.gen_name);
+-    printbuffer(stdout,buffer);
++    printbuffer(stdout);
+   }
+ /* pad rhs to length 2 if necessary */
+   if (strlen(rhs)==0){
+@@ -557,10 +557,10 @@ check_short_relation()
+       add_word_to_buffer(stdout,lhs,rws.gen_name);
+       add_to_buffer(0," = ");
+       add_word_to_buffer(stdout,rhs,rws.gen_name);
+-      printbuffer(stdout,buffer);
++      printbuffer(stdout);
+       sprintf(buffer,"Label number %d:  ",i);
+       add_word_to_buffer(stdout,lab,rws.gen_name);
+-      printbuffer(stdout,buffer);
++      printbuffer(stdout);
+       exit(2);
+     }
+   }
+@@ -610,7 +610,7 @@ long_word_multiplier(w,s)
+     buffer[0] = '\0';
+     add_to_buffer(0,"  #Calculating multiplier for word:  ");
+     add_word_to_buffer(stdout,w,rws.gen_name);
+-    printbuffer(stdout,buffer);
++    printbuffer(stdout);
+   }
+   l = strlen(w);
+ 
+diff --git a/back_end/black_boxes/kbmag/src/gpranred.c b/back_end/black_boxes/kbmag/src/gpranred.c
+index d113255..49c613d 100644
+--- a/back_end/black_boxes/kbmag/src/gpranred.c
++++ b/back_end/black_boxes/kbmag/src/gpranred.c
+@@ -119,27 +119,27 @@ strcat(infc,".wak");
+     fprintf(stderr,"Cannot open file %s.\n",inf3);
+       exit(1);
+   }
+-  fsa_read(rfile,&wa,DENSE,0,TRUE,fsaname);
++  fsa_read(rfile,&wa,DENSE,0,0,TRUE,fsaname);
+   fclose(rfile);
+ if ((rfile = fopen(infc,"r")) == 0) {
+   fprintf(stderr,"Cannot open file %s.\n",infc);
+     exit(1);
+ }
+-fsa_read(rfile,&wac,DENSE,0,TRUE,fsaname);
++fsa_read(rfile,&wac,DENSE,0,0,TRUE,fsaname);
+   fclose(rfile);
+ 
+   if ((rfile = fopen(inf1,"r")) == 0) {
+     fprintf(stderr,"Cannot open file %s.\n",inf1);
+     exit(1);
+   }
+-  fsa_read(rfile,&diff1,DENSE,MAXWDIFFS,TRUE,fsaname);
++  fsa_read(rfile,&diff1,DENSE,0,MAXWDIFFS,TRUE,fsaname);
+   fclose(rfile);
+ 
+   if ((rfile = fopen(inf2,"r")) == 0) {
+     fprintf(stderr,"Cannot open file %s.\n",inf2);
+     exit(1);
+   }
+-  fsa_read(rfile,&wd_fsa,DENSE,0,TRUE,fsaname);
++  fsa_read(rfile,&wd_fsa,DENSE,0,0,TRUE,fsaname);
+   fclose(rfile);
+ /* We shall be using the diff2 machine for reduction. */
+ 
+diff --git a/back_end/black_boxes/kbmag/src/wordreduce.c b/back_end/black_boxes/kbmag/src/wordreduce.c
+index be34b42..15f39da 100644
+--- a/back_end/black_boxes/kbmag/src/wordreduce.c
++++ b/back_end/black_boxes/kbmag/src/wordreduce.c
+@@ -57,7 +57,7 @@ void  fsa_table_dptr_init();
+ void  read_word();
+ void  diff_reduce();
+ void  rws_reduce();
+-void  add_word_to_buffer();
++int  add_word_to_buffer();
+ void  printbuffer();
+ void  process_names();
+ void  fsa_clear();
+diff --git a/back_end/black_boxes/orwp/orwp.C b/back_end/black_boxes/orwp/orwp.C
+index f08c21d..4944534 100644
+--- a/back_end/black_boxes/orwp/orwp.C
++++ b/back_end/black_boxes/orwp/orwp.C
+@@ -3115,7 +3115,7 @@ bool treatRelatorTestWord()
+ 
+ }
+ 
+-main()
++int main()
+ {
+ 	int pairCount = 0;
+ 
+diff --git a/back_end/general/include/Associations.h b/back_end/general/include/Associations.h
+index f8abdb5..ae621ed 100644
+--- a/back_end/general/include/Associations.h
++++ b/back_end/general/include/Associations.h
+@@ -149,8 +149,11 @@ public:
+ 
+   void bind( const Key& k, const Val& v ) {
+ 	 CellType* where = seek(k);
+-	 if ( where )
+-		where->getContents().val = v;
++	 if ( where ) {
++		Association<Key,Val> a = where->getContents();
++		a.val = v;
++		where->setContents(a);
++	 }
+ 	 else {
+ 		//@rn g++2.5.8 can get confused by:
+ 		// theList = new CellType(Association<Key,Val>(k, v), theList);
+diff --git a/back_end/general/include/QuickAssociations.h b/back_end/general/include/QuickAssociations.h
+index ca293cb..0efae0c 100644
+--- a/back_end/general/include/QuickAssociations.h
++++ b/back_end/general/include/QuickAssociations.h
+@@ -154,14 +154,14 @@ public:
+   void unbind( const Key& k ) {
+     EltType *elt = 0;
+     if( seek(k, elt) ) {
+-      removeElement( *elt );
++      this->removeElement( *elt );
+       delete elt;
+     }
+   }
+ 
+   void bind( const Key& k, const Val& v ) {
+     unbind(k);
+-    adjoinElement( EltType(k, v) );
++    this->adjoinElement( EltType(k, v) );
+   }
+ 
+   Val val( const Key& k ) const {
+@@ -211,7 +211,7 @@ private:
+ 
+   const bool seek( const Key& k, EltType* &elt ) const {
+     EltType qa(k);
+-    int index = abs(hashElement(qa)) % this->numberOfBuckets;
++    int index = abs(this->hashElement(qa)) % this->numberOfBuckets;
+     Cell< QuickAssociation<Key,Val> > * search = this->hashTable[index];
+     while ( search ) {
+       if ( k == search->getContents().key ) {
+diff --git a/back_end/general/src/RandomNumbers.C b/back_end/general/src/RandomNumbers.C
+index 7f1f7db..bcd5e50 100644
+--- a/back_end/general/src/RandomNumbers.C
++++ b/back_end/general/src/RandomNumbers.C
+@@ -43,7 +43,7 @@ float UniformRandom::rand( ) {
+   //  r[j] = (ix1 + ix2 * RM2) * RM1;
+   r[j] = (ix1 + ix2 / (float)M2) / (float)M1;
+   //
+-  return temp;
++  return temp < 1.0f ? temp : 0.99999994f;  // r[j] can round to 1.0; callers use int(rand()*n)
+ }
+ 
+ 
+diff --git a/back_end/general/src/Set.C b/back_end/general/src/Set.C
+index 0d9756c..b0cabcd 100644
+--- a/back_end/general/src/Set.C
++++ b/back_end/general/src/Set.C
+@@ -287,6 +287,7 @@ template <> void SetData<StatePair>::read( istream& istr ) { }
+ template class SetOf<DiffHistory>;
+ template <> void SetData<DiffHistory>::write( ostream& ostr ) const { }
+ template <> void SetData<DiffHistory>::read( istream& istr ) { }
++template int SetData<DiffHistory>::hashElement(const DiffHistory& t) const;
+ 
+ 
+ #include "../../SessionManager/include/OID.h"
+@@ -294,6 +295,7 @@ template <> void SetData<DiffHistory>::read( istream& istr ) { }
+ template class SetOf<OID>;
+ template <> void SetData<OID>::write( ostream& ostr ) const { }
+ template <> void SetData<OID>::read( istream& istr ) { }
++template int SetData<OID>::hashElement(const OID& t) const;
+ 
+ template class SetData<Generator>;
+ template class SetOf<Generator>;
+diff --git a/back_end/libg++/include/Integer.h b/back_end/libg++/include/Integer.h
+index f2e9b16..92b2b86 100644
+--- a/back_end/libg++/include/Integer.h
++++ b/back_end/libg++/include/Integer.h
+@@ -78,6 +78,10 @@ extern long     lg(const IntRep*);
+ 
+ extern IntRep _ZeroRep, _OneRep, _MinusOneRep;
+ 
++class Integer;
++char*    Itoa(const Integer& x, int base = 10, int width = 0);
++Integer  atoI(const char* s, int base = 10);
++
+ class Integer
+ {
+ protected:
+@@ -202,8 +206,8 @@ public:
+   long		  as_long() const { return Itolong(rep); }
+   double	  as_double() const;
+ 
+-  friend char*    Itoa(const Integer& x, int base = 10, int width = 0);
+-  friend Integer  atoI(const char* s, int base = 10);
++  friend char*    Itoa(const Integer& x, int base, int width);
++  friend Integer  atoI(const char* s, int base);
+   void		  printon(ostream& s, int base = 10, int width = 0) const;
+   
+   friend istream& operator >> (istream& s, Integer& y);
+diff --git a/back_end/libg++/include/String1.h b/back_end/libg++/include/String1.h
+index 2b69d51..c5226c5 100644
+--- a/back_end/libg++/include/String1.h
++++ b/back_end/libg++/include/String1.h
+@@ -53,6 +53,9 @@ StrRep*     Scapitalize(const StrRep*, StrRep*);
+ 
+ class String;
+ class SubString;
++String common_prefix(const String& x, const String& y, int startpos = 0);
++String common_suffix(const String& x, const String& y, int startpos = -1);
++int readline(istream& s, String& x, char terminator = '\n', int discard_terminator = 1);
+ 
+ class SubString
+ {
+@@ -319,9 +322,9 @@ public:
+   //                        const Regex&  sep);
+ 
+   friend String     common_prefix(const String& x, const String& y, 
+-                                  int startpos = 0);
++                                  int startpos);
+   friend String     common_suffix(const String& x, const String& y, 
+-                                  int startpos = -1);
++                                  int startpos);
+   friend String     replicate(char        c, int n);
+   friend String     replicate(const String&     y, int n);
+   friend String     join(String src[], int n, const String& sep);
+@@ -361,8 +364,8 @@ public:
+   friend istream&   operator>>(istream& s, String& x);
+ 
+   friend int        readline(istream& s, String& x, 
+-                             char terminator = '\n',
+-                             int discard_terminator = 1);
++                             char terminator,
++                             int discard_terminator);
+ 
+ // status
+ 
